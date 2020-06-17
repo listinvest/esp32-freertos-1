@@ -39,7 +39,6 @@ void lora_gw_send(void *p)
    }
 }
 
-
 void app_main()
 {
    lora_init();
