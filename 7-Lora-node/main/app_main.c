@@ -46,6 +46,16 @@ void app_main()
    lora_set_frequency(915e6);
    lora_enable_crc();
 
+      xTaskCreatePinnedToCore(
+      &lora_nd_receive,
+      "lora_nd_receive",
+      configMINIMAL_STACK_SIZE * 3,
+      NULL,
+      tskIDLE_PRIORITY + 5,
+      NULL,
+      0
+   );
+
    xTaskCreatePinnedToCore(
       &lora_nd_send,
       "lora_nd_send",
@@ -56,13 +66,5 @@ void app_main()
       0
    );
 
-   xTaskCreatePinnedToCore(
-      &lora_nd_receive,
-      "lora_nd_receive",
-      configMINIMAL_STACK_SIZE * 3,
-      NULL,
-      tskIDLE_PRIORITY + 5,
-      NULL,
-      0
-   );
+
 }
