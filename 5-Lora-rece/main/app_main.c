@@ -18,7 +18,7 @@ void task_rx(void *p)
          printf("Received: %s\n", buf);
          lora_receive();
       }
-      vTaskDelay(pdMS_TO_TICKS(1000));
+      vTaskDelay(pdMS_TO_TICKS(100));
    }
 }
 
