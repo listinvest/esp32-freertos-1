@@ -14,14 +14,19 @@ const uint32_t PYD_BIT = BIT2;
 const uint32_t ACK_BIT = BIT3;
 const uint32_t ALL_BITS = (BIT3|BIT2|BIT1|BIT0);
 
-void lora_gw_receive(void *p)
+const uint8_t CTS_FLAG[32] = "CTS";
+const uint8_t ACK_FLAG[8] = "ACK";
+
+uint8_t payload[8] = "PAYLOAD";
+
+void lora_nd_receive(void* p)
 {
    uint8_t buf[32];
-   int x;
-   for(;;) {
-      if ( xSemaphoreTake(xMutex, (TickType_t) 0xFFFFFFFF) == 1 ){
-         lora_disable_invertiq();
-         lora_receive();    // put into receive mode
+   int x = 0;
+   for(;;){
+      if ( xSemaphoreTake(xMutex, (TickType_t)0xFFFFFFFF) == 1 ){
+         lora_enable_invertiq();
+         lora_receive();
          while(lora_received()) {
             x = lora_receive_packet(buf, sizeof(buf));
             buf[x] = 0;
@@ -30,53 +35,29 @@ void lora_gw_receive(void *p)
          }
          xSemaphoreGive(xMutex);
       }
-
+      if( buf == CTS_FLAG ) xEventGroupSetBits(lora_flags, CTS_BIT);
+      else if ( buf == ACK_FLAG ) xEventGroupSetBits(lora_flags, ACK_BIT);
 
       vTaskDelay(pdMS_TO_TICKS(100));
    }
-
 }
 
-void lora_gw_send(void *p)
-{
-   if ( xSemaphoreTake(xMutex, (TickType_t) 0xFFFFFFFF) == 1 ){
-      lora_idle();
-      lora_enable_invertiq();
-
-      lora_send_packet((uint8_t*) p, sizeof(p));
-
-      lora_disable_invertiq();
-      lora_receive();
-
-      xSemaphoreGive(xMutex);
-   }
-}
-
-void comm_task( void *p )
+void lora_nd_send(void *tx_msg)
 {
    while(1){
-      uint32_t comm_bits = xEventGroupWaitBits(   //ESPERA RTS
-         lora_flags,
-         RTS_BIT,
-         false,
-         true,
-         pdMS_TO_TICKS(1000)
-      );
+     if ( xSemaphoreTake(xMutex, (TickType_t)0xFFFFFFFF) == 1 ){
+         lora_idle();
+         lora_disable_invertiq();
 
-      if(comm_bits == RTS_BIT){
-         lora_set_frequency(920e6);
-         lora_gw_send( "CTS" );
-         lora_set_frequency(915e6);
-         xEventGroupSetBits(lora_flags, CTS_BIT);  //ENVIAR CTS
+         lora_send_packet((uint8_t*) tx_msg, sizeof(tx_msg));
+         printf("sent msg %s\n", (char*)tx_msg);
+
+         lora_enable_invertiq();
+         lora_receive();
+
+         xSemaphoreGive(xMutex);
       }
-
-      comm_bits = xEventGroupWaitBits(
-         lora_flags,
-         (PYD_BIT|CTS_BIT|RTS_BIT),
-         false,
-         true,
-         pdMS_TO_TICKS(2000);
-      );
+      vTaskDelay(pdMS_TO_TICKS(100));    
    }
 }
 
@@ -88,7 +69,6 @@ void app_main()
 
    xMutex = xSemaphoreCreateMutex();
 
-   xTaskCreatePinnedToCore(&lora_gw_receive,"lora_gw_receive", 2048, NULL, 5, NULL, 0);
-
-   xTaskCreatePinnedToCore(&lora_gw_send, "lora_gw_send", 2048, "gate", 5, NULL, 0);
+   xTaskCreate(&lora_nd_send, "lora_comm", 2048, "ACK", 10, NULL);
+   xTaskCreate(&lora_nd_receive, "lora_rece", 2048, NULL, 5, NULL);
 }

@@ -10,44 +10,33 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "driver/gpio.h"
 #include "esp_spi_flash.h"
 
-TaskHandle_t myTaskHandle = NULL;
-
-void myTask1 ( void *p ){
-    while(1){
-        printf( "MIN \r\n");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+void blink_task1(void *pvParameter)
+{
+    while(1) {
+        printf("LIGA\n");
+	    gpio_set_level(GPIO_NUM_21, 1);
+        vTaskDelay(5000/portTICK_PERIOD_MS);
     }
 }
-
-void myTask2 ( void *p ){
-    while(1){
-        printf( "MAX \r\n");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+ 
+void blink_task2(void *pvParameter)
+{
+    while(1) {
+        printf("DESLIGA\n");
+	    gpio_set_level(GPIO_NUM_21, 0);
+        vTaskDelay(4000/portTICK_PERIOD_MS);
     }
 }
 
 void app_main()
 {
+    gpio_pad_select_gpio(GPIO_NUM_21); 
+    gpio_set_direction(GPIO_NUM_21,GPIO_MODE_OUTPUT);
 
-    xTaskCreatePinnedToCore(
-        myTask1,
-        "task1",
-        configMINIMAL_STACK_SIZE * 4, 
-        (void*) 0,
-        tskIDLE_PRIORITY ,
-        &myTaskHandle,
-        1
-    );
-
-    xTaskCreatePinnedToCore(
-        myTask2,
-        "task2",
-        configMINIMAL_STACK_SIZE * 4, 
-        (void*) 0,
-        configMAX_PRIORITIES -1 ,
-        &myTaskHandle,
-        1
-    );
+    xTaskCreatePinnedToCore( blink_task1, "blink_task1", 1024, NULL, 5, NULL, 0 );
+    xTaskCreatePinnedToCore( blink_task2, "blink_task2", 1024, NULL, 5, NULL, 0 );
+    printf("blink task started\n");
 }

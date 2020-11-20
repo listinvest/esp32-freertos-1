@@ -57,45 +57,6 @@ void lora_nd_send(void *tx_msg)
    }
 }
 
-void comm_task( void *p )
-{
-   while(1){
-      lora_nd_send( "RTS" );
-      xEventGroupSetBits(lora_flags, RTS_BIT);  //ENVIAR RTS
-
-      uint32_t comm_bits = xEventGroupWaitBits( //ESPERA CTS
-         lora_flags,
-         (CTS_BIT|RTS_BIT),
-         false,
-         true,
-         pdMS_TO_TICKS( 1000 )
-      );
-
-      if( comm_bits == (CTS_BIT|RTS_BIT) ){     //SE RECEBE CTS
-
-         lora_set_frequency(920e6);             //TROCA FREQ
-         lora_nd_send(payload);                 //ENV PAYLOAD
-         lora_set_frequency(915e6);             
-
-         xEventGroupSetBits(lora_flags, PYD_BIT);  
-      }
-
-      comm_bits = xEventGroupWaitBits(          //ESPERA ACK
-         lora_flags,
-         (CTS_BIT|RTS_BIT|PYD_BIT|ACK_BIT),
-         false,
-         true,
-         pdMS_TO_TICKS( 1000 )
-      );
-
-      if( (comm_bits && ACK_BIT) ==  ACK_BIT){  //SE RECEBE ACK
-         xEventGroupSetBits(lora_flags, ACK_BIT);  
-      }
-
-      vTaskDelay(pdMS_TO_TICKS(5000));
-   }  
-}
-
 void app_main()
 {
    lora_init();
@@ -104,6 +65,6 @@ void app_main()
 
    xMutex = xSemaphoreCreateMutex();
 
-   xTaskCreate(&comm_task, "lora_comm", 2048, NULL, 10, NULL);
+   xTaskCreate(&lora_nd_send, "lora_comm", 2048, "RTS", 10, NULL);
    xTaskCreate(&lora_nd_receive, "lora_rece", 2048, NULL, 5, NULL);
 }

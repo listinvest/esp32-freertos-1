@@ -70,7 +70,7 @@ void FontDisplayTask( void* Param ) {
 
                 while ( time( NULL ) < NextFontTime ) {
                     SSD1306_Clear( Display, SSD_COLOR_BLACK );
-                    SSD1306_FontDrawAnchoredString( Display, TextAnchor_Center, "ENETEC", SSD_COLOR_WHITE );
+                    SSD1306_FontDrawAnchoredString( Display, TextAnchor_Center, "", SSD_COLOR_WHITE );
                     SSD1306_Update( Display );
 
                     vTaskDelay( pdMS_TO_TICKS( 100 ) );
